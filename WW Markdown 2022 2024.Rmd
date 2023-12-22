@@ -1,11 +1,10 @@
 ---
 title: "Waste Water 2022 - 2024"
 author: "TUYEN PHAM"
-date: "10/6/2023"
+date: "12/23/2023"
 output: html_document
 runtime: shiny
 ---
-install.packages("limma")
 
 ```{r Data Prep, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
 library(shiny)
@@ -408,7 +407,7 @@ server <- function(input, output) {
         x = "Collection Date",
         y = "log10 Average Concentration"
       )+
-      ggtitle(paste("Average of all campus sites after", as.character(date,"%m/%d/%Y")))
+      ggtitle(paste("Average of all campus sites after", as.Date(input$single_date,"%m/%d/%Y")))
   })
   
   output$plot2 <- renderPlot({
@@ -436,7 +435,7 @@ server <- function(input, output) {
                       geom = 'text',
                       aes(label = paste("P-value = ", signif(..p.value.., digits = 3), sep = "")),
                       label.x.npc = 'left', label.y.npc = 0.35, size = 4)+
-      ggtitle(paste("The trend of all campus sites' average after", as.character(date,"%m/%d/%Y")))
+      ggtitle(paste("The trend of all campus sites' average after", as.Date(input$single_date,"%m/%d/%Y")))
   })
   
   output$plot3 <- renderPlot({
@@ -457,7 +456,7 @@ server <- function(input, output) {
         x = "Collection Date",
         y = "log10 Average Concentration"
       )+
-      ggtitle(paste("Average of all campus sites between", as.character(start_date,"%m/%d/%Y"), "and", as.character(end_date,"%m/%d/%Y")))
+      ggtitle(paste("Average of all campus sites between", as.Date(input$range_date[1],"%m/%d/%Y"), "and", as.Date(input$range_date[2],"%m/%d/%Y")))
   })
   
   output$plot4 <- renderPlot({
@@ -486,11 +485,10 @@ server <- function(input, output) {
                       geom = 'text',
                       aes(label = paste("P-value = ", signif(..p.value.., digits = 3), sep = "")),
                       label.x.npc = 'left', label.y.npc = 0.35, size = 4)+
-      ggtitle(paste("The trend of all campus sites' average between", as.character(start_date,"%m/%d/%Y"), "and", as.character(end_date,"%m/%d/%Y")))
+      ggtitle(paste("The trend of all campus sites' average between", as.Date(input$range_date[1],"%m/%d/%Y"), "and", as.Date(input$range_date[2],"%m/%d/%Y")))
   })
 }
-
-devmode(TRUE)
+options(shiny.autoreload = FALSE)
 shinyApp(ui = ui, server = server)
 ```
 
