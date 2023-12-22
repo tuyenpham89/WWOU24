@@ -402,7 +402,7 @@ server <- function(input, output) {
       ) +
       geom_smooth(linewidth=0.5,method = "loess", formula = y ~ x) +
       geom_point() +
-      scale_x_date(date_breaks = "4 weeks", date_labels = "%m/%d/%y") +
+      scale_x_date(date_breaks = "6 weeks", date_labels = "%m/%d/%y") +
       labs(
         x = "Collection Date",
         y = "log10 Average Concentration"
@@ -422,7 +422,7 @@ server <- function(input, output) {
       ) +
       geom_smooth(linewidth=0.5,method = "lm", formula = y ~ x) +
       geom_point() +
-      scale_x_date(date_breaks = "4 weeks", date_labels = "%m/%d/%y") +
+      scale_x_date(date_breaks = "6 weeks", date_labels = "%m/%d/%y") +
       labs(
         x = "Collection Date",
         y = "log10 Average Concentration"
@@ -451,7 +451,7 @@ server <- function(input, output) {
       ) +
       geom_smooth(linewidth=0.5,method = "loess", formula = y ~ x) +
       geom_point() +
-      scale_x_date(date_breaks = "4 weeks", date_labels = "%m/%d/%y") +
+      scale_x_date(date_breaks = "6 weeks", date_labels = "%m/%d/%y") +
       labs(
         x = "Collection Date",
         y = "log10 Average Concentration"
@@ -472,7 +472,7 @@ server <- function(input, output) {
       ) +
       geom_smooth(linewidth=0.5,method = "lm", formula = y ~ x) +
       geom_point() +
-      scale_x_date(date_breaks = "4 weeks", date_labels = "%m/%d/%y") +
+      scale_x_date(date_breaks = "6 weeks", date_labels = "%m/%d/%y") +
       labs(
         x = "Collection Date",
         y = "log10 Average Concentration"
