@@ -1,0 +1,376 @@
+---
+title: "Waste Water 2022 - 2024"
+author: "TUYEN PHAM"
+date: "10/6/2023"
+output: html_document
+runtime: shiny
+---
+install.packages("limma")
+
+```{r Data Prep, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+library(shiny)
+library(zoo)
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(broom)
+#library(limma)      # lmFit, etc -- fitting many models
+library(ggpubr)
+library(forecast)
+library(ggplot2)
+library(AER)
+library(dynlm)
+library(readxl)
+library(stargazer)
+library(scales)
+library(quantmod)
+library(urca)
+library(cardidates)
+library(ggpmisc)
+library(shinythemes)
+library(openxlsx)
+library(shinyBS)
+library(shinyWidgets)
+library(openxlsx)
+library(writexl)
+library(readxl)
+library(data.table)
+library(shinydashboard)
+
+
+#Import data
+read.csv(
+  "C:\\OHIO UNIVERSITY PROJECTS\\Covid_Waste Water\\R_Code 2023_2024_Report\\WW20222023.csv"
+) %>%
+  select(
+    sample_collect_date, sample_collect_time,
+    sample_id, pcr_target_avg_conc
+  ) -> WW20222023
+
+read.csv(
+  "C:\\OHIO UNIVERSITY PROJECTS\\Covid_Waste Water\\R_Code 2023_2024_Report\\WW20232024.csv"
+) %>%
+  select(
+    sample_collect_date, sample_collect_time,
+    sample_id, pcr_target_avg_conc
+  ) -> WW20232024
+
+cov19 <- rbind(WW20222023,WW20232024)
+
+#Filter for dorm sites
+cov19 %>%
+  filter(
+    grepl("TP", sample_id)
+  ) %>%
+  separate(
+    sample_id ,
+    into = c("tp", "waste"),
+    sep = "_"
+  ) %>%
+  mutate(mydate = as.Date(sample_collect_date)) -> covdf 
+
+#get rid of TP16
+covdf <- covdf[covdf$tp != "TP16",]
+covdf[covdf==0]=NA
+
+#Get all dorm average
+Covid_dorm_avg <- aggregate(pcr_target_avg_conc ~ mydate, covdf, mean)
+
+#Get 8 most current data points for all individual dorm
+covdf %>%
+  group_by(tp) %>%
+  arrange(
+    desc(mydate)
+  ) %>%
+  slice(1:8) -> mydf
+
+#Get the number of days after first day of collection (tvar), and log 10 of ww concentration (yvar)
+mydf %>%
+  group_by(tp) %>%
+  mutate(
+    mindate = min(sample_collect_date),
+    tvar = as.numeric(
+      difftime(
+        sample_collect_date,
+        mindate,
+        units = "days"
+      )
+    ),
+    yvar = log10(as.numeric(pcr_target_avg_conc))
+  ) -> mydf
+
+#Get rid of 0 observations
+mydf$yvar[mydf$yvar==-Inf] <- NA
+
+
+#Get 8 most current data points for dorm AVERAGE
+Covid_dorm_avg %>%
+  arrange(
+    desc(mydate)
+  ) %>%
+  slice(1:8) -> Covid_dorm_avg_8p
+
+#Get the number of days after first day of collection (tvar), and log 10 of ww concentrtion (yvar)
+Covid_dorm_avg_8p %>%
+  mutate(
+    mindate = min(mydate),
+    tvar = as.numeric(
+      difftime(
+        mydate,
+        mindate,
+        units = "days"
+      )
+    ),
+    yvar = log10(as.numeric(pcr_target_avg_conc))
+  ) -> Covid_dorm_avg_8p
+###DONE WITH DATA PREP###
+```
+
+\
+Average concentration for all campus sites
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+Covid_dorm_avg %>%
+  ggplot(
+    aes(
+      x = mydate,
+      y = log10(as.numeric(pcr_target_avg_conc))
+    )
+  ) +
+  geom_smooth(size=0.5,method = "loess", formula = y ~ x) +
+  geom_point() +
+  scale_x_date(date_breaks = "8 weeks", date_labels = "%m-%d-%y") +
+  labs(
+    x = "Collection Date",
+    y = "log10 Average Concentration"
+  )
+```
+
+\
+The 8 latest data points for all campus sites' average concentration
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+#THE LATEST 8 DATA POINTS (1 MONTH OF DATA)
+#ALL DORM AVERAGGE
+#Just data (dorm avg)
+Covid_dorm_avg_8p %>%
+  ggplot(
+    aes(
+      x = mydate,
+      y = log10(as.numeric(pcr_target_avg_conc))
+    )
+  ) +
+  geom_smooth(method = "loess",
+              formula = y ~ x) +
+  geom_point() +
+  scale_x_date(date_breaks = "1 weeks", date_labels = "%m-%d-%y") +
+  labs(
+    x = "Collection Date",
+    y = "log10 Average Concentration"
+  ) 
+
+```
+\
+The 8 latest data points for all campus sites' average concentration with regression line
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+#Data with regression line (dorm avg)
+Covid_dorm_avg_8p %>%
+  ggplot(
+    aes(
+      x = mydate,
+      y = yvar
+    )
+  ) +
+  geom_smooth(color = "blue", size = 0.5,method = "lm",
+              formula = y ~ x,
+              se = F) +
+  geom_point() +
+  labs(
+    x = "",
+    y = "log10 Average Concentration"
+  ) +
+  stat_poly_eq(aes(label = paste(..rr.label..)), 
+               label.x.npc = "left", label.y.npc = 0.15,
+               formula = y~x, parse = TRUE, size = 3)+
+  stat_fit_glance(method = 'lm',
+                  method.args = list(formula = y~x),
+                  geom = 'text',
+                  aes(label = paste("P-value = ", signif(..p.value.., digits = 3), sep = "")),
+                  label.x.npc = 'left', label.y.npc = 0.35, size = 3)
+
+fit_avg_sum <- summary(lm(tvar ~ yvar, data = Covid_dorm_avg_8p))
+
+if (fit_avg_sum$coefficients[2,1]>0 & fit_avg_sum$coefficients[2,4]>= 0.1){
+    print("There was no sifginicant increase of viral concentration in the waste water in the last 4 weeks")
+} else if (fit_avg_sum$coefficients[2,1]>0 & fit_avg_sum$coefficients[2,4]< 0.1){
+      print("There was sifginicant increase of viral concentration in the waste water in the last 4 weeks")
+  } else if (fit_avg_sum$coefficients[2,1]<0 & fit_avg_sum$coefficients[2,4]>= 0.1){
+        print("There was no sifginicant decrease of viral concentration in the waste water in the last 4 weeks")
+     } else if (fit_avg_sum$coefficients[2,1]<0 & fit_avg_sum$coefficients[2,4]< 0.1){
+    print("There was sifginicant decrease of viral concentration in the waste water in the last 4 weeks")
+      }
+```
+
+\
+Individual campus site data 2022-2024
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+covdf %>%
+  ggplot(
+    aes(
+      x = mydate,
+      y = log10(as.numeric(pcr_target_avg_conc))
+    )
+  ) +
+  geom_smooth(size=0.5,method = "loess", formula = y ~ x) +
+  geom_point() +
+  facet_wrap(~ tp, ncol = 2) +
+  scale_x_date(date_breaks = "12 weeks", date_labels = "%m-%d-%y") +
+  labs(
+    x = "Collection Date",
+    y = "log10 Average Concentration"
+  )
+```
+
+
+\
+The latest 8 data points for individual campus sites with regression lines
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+#THE LATEST 8 DATA POINTS (1 MONTH OF DATA)
+#ALL DORM AVERAGGE
+#Just data (dorm avg)
+# BY INDIVIDUAL DORM
+# Plot the latest 8 data points by dorm (panel)
+# Just data
+mydf %>%
+  ggplot(
+    aes(
+      x = mydate,
+      y = log10(as.numeric(pcr_target_avg_conc))
+    )
+  ) +
+  geom_smooth(size = 0.5,
+              method = "loess",
+              formula = y ~ x) +
+  geom_point() +
+  facet_wrap(~ tp, ncol = 2) +
+  scale_x_date(date_breaks = "1 weeks", date_labels = "%m-%d") +
+  labs(
+    x = "Collection Date",
+    y = "log10 Average Concentration"
+  ) 
+
+#Data with regression line
+mydf %>%
+  ggplot(
+    aes(
+      x = mydate,
+      y = yvar
+    )
+  ) +
+  geom_smooth(color = "blue", size = 0.5,method = "lm",
+              formula = y ~ x,
+              se = F) +
+  geom_point() +
+  facet_wrap(~ tp, ncol = 2) +
+  labs(
+    x = "",
+    y = "log10 Average Concentration"
+  ) +
+  stat_poly_eq(aes(label = paste(..rr.label..)), 
+               label.x.npc = "left", label.y.npc = 0.15,
+               formula = y~x, parse = TRUE, size = 2)+
+  stat_fit_glance(method = 'lm',
+                  method.args = list(formula = y~x),
+                  geom = 'text',
+                  aes(label = paste("P-value = ", signif(..p.value.., digits = 3), sep = "")),
+                  label.x.npc = 'left', label.y.npc = 0.35, size = 2)
+
+
+mydf %>%
+  nest(dat = -tp) %>%
+  mutate(
+    model_1 = map(dat, ~ lm(yvar ~ tvar, data = .x %>% drop_na(yvar, tvar))),
+    coef_1 = map(model_1, tidy)
+  ) %>%
+  select(tp, starts_with('coef')) %>%
+  pivot_longer(
+    cols = starts_with('coef')
+  ) %>%
+  unnest(c(value)) %>%
+  mutate(
+    across(where(is.numeric), ~sprintf("%.4f", .x))
+  ) -> mydf_lm
+
+mydf_lm$estimate[2] -> tp15_est
+mydf_lm$estimate[4] -> tp22_est
+mydf_lm$estimate[6] -> tp25_est
+mydf_lm$estimate[8] -> tp6_est
+mydf_lm$estimate[10] -> tp9_est
+
+mydf_lm$p.value[2] -> tp15_pval
+mydf_lm$p.value[4] -> tp22_pval
+mydf_lm$p.value[6] -> tp25_pval
+mydf_lm$p.value[8] -> tp6_pval
+mydf_lm$p.value[10] -> tp9_pval
+
+
+if (tp15_est>0 & tp15_pval>= 0.1){
+  print("There was no sifginicant increase of viral concentration in TP15C's waste water in the last 4 weeks")
+} else if (tp15_est>0 & tp15_pval< 0.1){
+  print("There was sifginicant increase of viral concentration in TP15C's waste water in the last 4 weeks")
+} else if (tp15_est <0 & tp15_pval>= 0.1){
+  print("There was no sifginicant decrease of viral concentration in TP15C's waste water in the last 4 weeks")
+} else if (tp15_est <0 & tp15_pval< 0.1){
+  print("There was sifginicant decrease of viral concentration in TP15C's waste water in the last 4 weeks")
+}
+
+if (tp22_est>0 & tp22_pval>= 0.1){
+  print("There was no sifginicant increase of viral concentration in TP22's waste water in the last 4 weeks")
+} else if (tp22_est>0 & tp22_pval< 0.1){
+  print("There was sifginicant increase of viral concentration in TP22's waste water in the last 4 weeks")
+} else if (tp22_est <0 & tp22_pval>= 0.1){
+  print("There was no sifginicant decrease of viral concentration in TP22's waste water in the last 4 weeks")
+} else if (tp22_est <0 & tp22_pval< 0.1){
+  print("There was sifginicant decrease of viral concentration in TP22's waste water in the last 4 weeks")
+}
+
+if (tp25_est>0 & tp25_pval>= 0.1){
+  print("There was no sifginicant increase of viral concentration in TP25's waste water in the last 4 weeks")
+} else if (tp25_est>0 & tp25_pval< 0.1){
+  print("There was sifginicant increase of viral concentration in TP25's waste water in the last 4 weeks")
+} else if (tp25_est <0 & tp25_pval>= 0.1){
+  print("There was no sifginicant decrease of viral concentration in TP25's waste water in the last 4 weeks")
+} else if (tp25_est <0 & tp25_pval< 0.1){
+  print("There was sifginicant decrease of viral concentration in TP25's waste water in the last 4 weeks")
+}
+
+if (tp6_est>0 & tp6_pval>= 0.1){
+  print("There was no sifginicant increase of viral concentration in TP6's waste water in the last 4 weeks")
+} else if (tp6_est>0 & tp6_pval< 0.1){
+  print("There was sifginicant increase of viral concentration in TP6's waste water in the last 4 weeks")
+} else if (tp6_est <0 & tp6_pval>= 0.1){
+  print("There was no sifginicant decrease of viral concentration in TP6's waste water in the last 4 weeks")
+} else if (tp6_est <0 & tp6_pval< 0.1){
+  print("There was sifginicant decrease of viral concentration in TP6's waste water in the last 4 weeks")
+}
+
+if (tp9_est>0 & tp9_pval>= 0.1){
+  print("There was no sifginicant increase of viral concentration in TP9's waste water in the last 4 weeks")
+} else if (tp9_est>0 & tp9_pval< 0.1){
+  print("There was sifginicant increase of viral concentration in TP9's waste water in the last 4 weeks")
+} else if (tp9_est <0 & tp9_pval>= 0.1){
+  print("There was no sifginicant decrease of viral concentration in TP9's waste water in the last 4 weeks")
+} else if (tp9_est <0 & tp9_pval< 0.1){
+  print("There was sifginicant decrease of viral concentration in TP9's waste water in the last 4 weeks")
+}
+
+```
+
+
+
+
+
