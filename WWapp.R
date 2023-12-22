@@ -6,7 +6,7 @@ library(dplyr)
 library(tidyr)
 library(purrr)
 library(broom)
-library(limma)      # lmFit, etc -- fitting many models
+#library(limma)      # lmFit, etc -- fitting many models
 library(ggpubr)
 library(forecast)
 library(ggplot2)
@@ -31,7 +31,7 @@ library(shinydashboard)
 
 #Import data
 read.csv(
-  "C:\\OHIO UNIVERSITY PROJECTS\\Covid_Waste Water\\R_Code 2023_2024_Report\\WW20222023.csv"
+  "WW20222023.csv"
 ) %>%
   select(
     sample_collect_date, sample_collect_time,
@@ -39,7 +39,7 @@ read.csv(
   ) -> WW20222023
 
 read.csv(
-  "C:\\OHIO UNIVERSITY PROJECTS\\Covid_Waste Water\\R_Code 2023_2024_Report\\WW20232024.csv"
+  "WW20232024.csv"
 ) %>%
   select(
     sample_collect_date, sample_collect_time,
@@ -140,7 +140,7 @@ server <- function(input, output) {
   #    re-executed when inputs (input$bins) change
   # 2. Its output type is a plot
   output$plot1 <- renderPlot({
-    date = as.Date(input$single_date,"%m/%d/%Y")
+    date = as.numeric(as.Date(input$single_date,"%m/%d/%Y"))
     Covid_dorm_avg_new1 <- Covid_dorm_avg[Covid_dorm_avg$mydate>=date,]
     Covid_dorm_avg_new1 %>%  
       ggplot(
@@ -160,7 +160,7 @@ server <- function(input, output) {
   })
   
   output$plot2 <- renderPlot({
-    date = as.Date(input$single_date,"%m/%d/%Y")
+    date = as.numeric(as.Date(input$single_date,"%m/%d/%Y"))
     Covid_dorm_avg_new4 <- Covid_dorm_avg[Covid_dorm_avg$mydate>=date,]
     Covid_dorm_avg_new4 %>%  
       ggplot(
@@ -188,8 +188,8 @@ server <- function(input, output) {
   })
   
   output$plot3 <- renderPlot({
-    start_date = as.Date(input$range_date[1],"%m/%d/%Y")
-    end_date = as.Date(input$range_date[2],"%m/%d/%Y")
+    start_date = as.numeric(as.Date(input$range_date[1],"%m/%d/%Y"))
+    end_date = as.numeric(as.Date(input$range_date[2],"%m/%d/%Y"))
     Covid_dorm_avg_new2 <- Covid_dorm_avg[Covid_dorm_avg$mydate>=start_date & Covid_dorm_avg$mydate<=end_date,]
     Covid_dorm_avg_new2 %>%  
       ggplot(
@@ -209,8 +209,8 @@ server <- function(input, output) {
   })
   
   output$plot4 <- renderPlot({
-    start_date = as.Date(input$range_date[1],"%m/%d/%Y")
-    end_date = as.Date(input$range_date[2],"%m/%d/%Y")
+    start_date = as.numeric(as.Date(input$range_date[1],"%m/%d/%Y"))
+    end_date = as.numeric(as.Date(input$range_date[2],"%m/%d/%Y"))
     Covid_dorm_avg_new3 <- Covid_dorm_avg[Covid_dorm_avg$mydate>=start_date & Covid_dorm_avg$mydate<=end_date,]
     Covid_dorm_avg_new3 %>%  
       ggplot(
@@ -238,4 +238,6 @@ server <- function(input, output) {
   })
 }
 
+devmode(TRUE)
 shinyApp(ui = ui, server = server)
+
