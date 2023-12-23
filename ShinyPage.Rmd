@@ -1,10 +1,9 @@
 ---
-title: "Shiny_app_Page"
-author: "Tuyen Pham"
-date: "`r Sys.Date()`"
 output: html_document
 runtime: shiny
 ---
+
+#R Shiny
 ```{r Data Prep, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
 library(shiny)
 library(zoo)
@@ -125,15 +124,14 @@ Covid_dorm_avg_8p %>%
 ###DONE WITH DATA PREP###
 ```
 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 ui <- fluidPage(
   sidebarLayout(position="right",
                 sidebarPanel(
-                  dateInput("single_date", "Select a single date to view all data and trend after the selected date", value=mean(Covid_dorm_avg$mydate), min=min(Covid_dorm_avg$mydate), max=max(Covid_dorm_avg$mydate), format="mm/dd/yyyy"),
                   dateRangeInput("range_date", "Select a range of dates to view data and trend between the range", start=min(Covid_dorm_avg$mydate), end=max(Covid_dorm_avg$mydate), min=min(Covid_dorm_avg$mydate), max=max(Covid_dorm_avg$mydate),format="mm/dd/yyyy")
                 ),
-                mainPanel(plotOutput("plot1"),plotOutput("plot2"),plotOutput("plot3"),plotOutput("plot4")))
+                mainPanel(plotOutput("plot3"),plotOutput("plot4")))
 )
 
 
@@ -248,3 +246,7 @@ server <- function(input, output) {
 options(shiny.autoreload = FALSE)
 shinyApp(ui = ui, server = server)
 ```
+
+
+
+
