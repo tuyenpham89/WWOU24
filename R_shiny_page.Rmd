@@ -3,7 +3,129 @@ title: "Shiny_app_Page"
 author: "Tuyen Pham"
 date: "`r Sys.Date()`"
 output: html_document
+runtime: shiny
 ---
+```{r Data Prep, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+library(shiny)
+library(zoo)
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(broom)
+#library(limma)      # lmFit, etc -- fitting many models
+library(ggpubr)
+library(forecast)
+library(ggplot2)
+library(AER)
+library(dynlm)
+library(readxl)
+library(stargazer)
+library(scales)
+library(quantmod)
+library(urca)
+library(cardidates)
+library(ggpmisc)
+library(shinythemes)
+library(openxlsx)
+library(shinyBS)
+library(shinyWidgets)
+library(openxlsx)
+library(writexl)
+library(readxl)
+library(data.table)
+library(shinydashboard)
+
+
+#Import data
+read.csv(
+  "WW20222023.csv"
+) %>%
+  select(
+    sample_collect_date, sample_collect_time,
+    sample_id, pcr_target_avg_conc
+  ) -> WW20222023
+
+read.csv(
+  "WW20232024.csv"
+) %>%
+  select(
+    sample_collect_date, sample_collect_time,
+    sample_id, pcr_target_avg_conc
+  ) -> WW20232024
+
+cov19 <- rbind(WW20222023,WW20232024)
+
+#Filter for dorm sites
+cov19 %>%
+  filter(
+    grepl("TP", sample_id)
+  ) %>%
+  separate(
+    sample_id ,
+    into = c("tp", "waste"),
+    sep = "_"
+  ) %>%
+  mutate(mydate = as.Date(sample_collect_date)) -> covdf 
+
+#get rid of TP16
+covdf <- covdf[covdf$tp != "TP16",]
+covdf[covdf==0]=NA
+
+#Get all dorm average
+Covid_dorm_avg <- aggregate(pcr_target_avg_conc ~ mydate, covdf, mean)
+
+#Get 8 most current data points for all individual dorm
+covdf %>%
+  group_by(tp) %>%
+  arrange(
+    desc(mydate)
+  ) %>%
+  slice(1:8) -> mydf
+
+#Get the number of days after first day of collection (tvar), and log 10 of ww concentration (yvar)
+mydf %>%
+  group_by(tp) %>%
+  mutate(
+    mindate = min(sample_collect_date),
+    tvar = as.numeric(
+      difftime(
+        sample_collect_date,
+        mindate,
+        units = "days"
+      )
+    ),
+    yvar = log10(as.numeric(pcr_target_avg_conc))
+  ) -> mydf
+
+#Get rid of 0 observations
+mydf$yvar[mydf$yvar==-Inf] <- NA
+
+
+#Get 8 most current data points for dorm AVERAGE
+Covid_dorm_avg %>%
+  arrange(
+    desc(mydate)
+  ) %>%
+  slice(1:8) -> Covid_dorm_avg_8p
+
+#Get the number of days after first day of collection (tvar), and log 10 of ww concentrtion (yvar)
+Covid_dorm_avg_8p %>%
+  mutate(
+    mindate = min(mydate),
+    tvar = as.numeric(
+      difftime(
+        mydate,
+        mindate,
+        units = "days"
+      )
+    ),
+    yvar = log10(as.numeric(pcr_target_avg_conc))
+  ) -> Covid_dorm_avg_8p
+###DONE WITH DATA PREP###
+```
+
+
 ```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 ui <- fluidPage(
   sidebarLayout(position="right",
